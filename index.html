@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Arsip DPM FH-UH</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --dpm-blue: #002D5E;
+            --dpm-red: #B90000;
+        }
+        .bg-dpm-blue { background-color: var(--dpm-blue); }
+        .bg-dpm-red { background-color: var(--dpm-red); }
+        .text-dpm-red { color: var(--dpm-red); }
+        .border-dpm-red { border-color: var(--dpm-red); }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans text-gray-900">
+
+    <div class="flex h-screen overflow-hidden">
+        <aside class="w-72 bg-dpm-blue text-white flex flex-col shadow-2xl">
+            <div class="p-8 text-center border-b border-blue-800">
+                <div class="w-24 h-24 bg-white rounded-xl mx-auto mb-4 flex items-center justify-center p-2 shadow-inner">
+                    <img src="IMG_7055.jpg" alt="Logo DPM" class="max-h-full object-contain">
+                </div>
+                <h1 class="text-sm font-black uppercase tracking-widest leading-tight">Dewan Perwakilan Mahasiswa</h1>
+                <p class="text-[11px] text-blue-300 font-semibold mt-1">FAKULTAS HUKUM UNHAS</p>
+            </div>
+            
+            <nav class="flex-1 mt-8 space-y-2 px-4">
+                <button onclick="switchTab('masuk')" id="nav-masuk" class="w-full flex items-center px-6 py-3 rounded-lg bg-dpm-red transition-all shadow-lg">
+                    <i class="fas fa-file-import mr-3"></i> Surat Masuk
+                </button>
+                <button onclick="switchTab('keluar')" id="nav-keluar" class="w-full flex items-center px-6 py-3 rounded-lg hover:bg-red-800 transition-all">
+                    <i class="fas fa-file-export mr-3"></i> Surat Keluar
+                </button>
+            </nav>
+
+            <div class="p-6 text-[10px] text-blue-400 text-center uppercase tracking-tighter">
+                &copy; 2026 DPM FH-UH Archive System
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col">
+            <header class="bg-white px-10 py-6 flex justify-between items-center border-b-4 border-dpm-red shadow-md">
+                <div>
+                    <h2 id="view-title" class="text-3xl font-extrabold text-gray-800 tracking-tight">Arsip Surat Masuk</h2>
+                    <p class="text-sm text-gray-500 font-medium">Manajemen dokumentasi digital DPM FH-UH</p>
+                </div>
+                <button onclick="openModal()" class="bg-dpm-red hover:bg-red-700 text-white font-bold px-6 py-3 rounded-full flex items-center shadow-lg transition-transform active:scale-95">
+                    <i class="fas fa-plus-circle mr-2"></i> Tambah Surat Baru
+                </button>
+            </header>
+
+            <section class="p-10 overflow-y-auto">
+                <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+                    <table class="w-full text-left">
+                        <thead class="bg-gray-100 border-b border-gray-200">
+                            <tr>
+                                <th class="px-6 py-4 text-xs font-bold text-gray-600 uppercase">No. Surat</th>
+                                <th class="px-6 py-4 text-xs font-bold text-gray-600 uppercase">Perihal</th>
+                                <th class="px-6 py-4 text-xs font-bold text-gray-600 uppercase text-center">Akses File</th>
+                                <th class="px-6 py-4 text-xs font-bold text-gray-600 uppercase text-center">Hapus</th>
+                            </tr>
+                        </thead>
+                        <tbody id="letter-table-body" class="divide-y divide-gray-100">
+                            </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="modal-input" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-white w-[500px] rounded-3xl shadow-2xl overflow-hidden border-t-8 border-dpm-red p-8">
+            <h3 class="text-2xl font-black text-dpm-blue mb-6 uppercase">Input Arsip</h3>
+            <form id="form-surat" class="space-y-4">
+                <input type="text" id="nomor-surat" required class="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" placeholder="Nomor Surat">
+                <input type="text" id="perihal" required class="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" placeholder="Perihal">
+                <input type="date" id="tanggal" required class="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                
+                <label class="block cursor-pointer border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:bg-gray-50 transition">
+                    <span id="filename-preview" class="text-sm text-gray-400">Pilih file dari laptop</span>
+                    <input type="file" id="file-input" class="hidden" onchange="updateFileName(this)">
+                </label>
+
+                <div class="flex gap-2">
+                    <button type="button" onclick="closeModal()" class="flex-1 bg-gray-200 py-4 rounded-xl font-bold">Batal</button>
+                    <button type="submit" class="flex-[2] bg-dpm-blue text-white font-bold py-4 rounded-xl shadow-lg hover:bg-blue-900 transition-all uppercase">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let currentTab = 'masuk';
+        let db = JSON.parse(localStorage.getItem('dpm_archive')) || { masuk: [], keluar: [] };
+
+        function switchTab(type) {
+            currentTab = type;
+            document.getElementById('view-title').innerText = type === 'masuk' ? "Arsip Surat Masuk" : "Arsip Surat Keluar";
+            document.getElementById('nav-masuk').className = type === 'masuk' ? "w-full flex items-center px-6 py-3 rounded-lg bg-dpm-red text-white shadow-lg" : "w-full flex items-center px-6 py-3 rounded-lg hover:bg-red-800 text-white transition-all";
+            document.getElementById('nav-keluar').className = type === 'keluar' ? "w-full flex items-center px-6 py-3 rounded-lg bg-dpm-red text-white shadow-lg" : "w-full flex items-center px-6 py-3 rounded-lg hover:bg-red-800 text-white transition-all";
+            renderTable();
+        }
+
+        function openModal() { document.getElementById('modal-input').classList.remove('hidden'); }
+        function closeModal() { document.getElementById('modal-input').classList.add('hidden'); document.getElementById('form-surat').reset(); document.getElementById('filename-preview').innerText = "Pilih file dari laptop"; }
+
+        function updateFileName(input) {
+            document.getElementById('filename-preview').innerText = input.files[0] ? input.files[0].name : "Pilih file dari laptop";
+        }
+
+        document.getElementById('form-surat').onsubmit = function(e) {
+            e.preventDefault();
+            const fileInput = document.getElementById('file-input');
+            const file = fileInput.files[0];
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const newEntry = {
+                        id: Date.now(),
+                        nomor: document.getElementById('nomor-surat').value,
+                        perihal: document.getElementById('perihal').value,
+                        tanggal: document.getElementById('tanggal').value,
+                        fileName: file.name,
+                        fileContent: event.target.result // Ini menyimpan isi file (Base64)
+                    };
+                    saveToDB(newEntry);
+                };
+                reader.readAsDataURL(file); // Membaca file sebagai URL yang bisa dibuka
+            } else {
+                alert("Harap pilih file terlebih dahulu!");
+            }
+        };
+
+        function saveToDB(entry) {
+            try {
+                db[currentTab].push(entry);
+                localStorage.setItem('dpm_archive', JSON.stringify(db));
+                renderTable();
+                closeModal();
+            } catch (e) {
+                alert("Gagal menyimpan! File mungkin terlalu besar untuk memori browser.");
+            }
+        }
+
+        function deleteEntry(id) {
+            if(confirm('Hapus arsip ini?')) {
+                db[currentTab] = db[currentTab].filter(item => item.id !== id);
+                localStorage.setItem('dpm_archive', JSON.stringify(db));
+                renderTable();
+            }
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('letter-table-body');
+            tbody.innerHTML = db[currentTab].length ? '' : '<tr><td colspan="4" class="text-center py-10 text-gray-400 italic">Belum ada arsip.</td></tr>';
+            
+            db[currentTab].forEach(item => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-blue-50 transition">
+                        <td class="px-6 py-4 font-bold text-dpm-blue">${item.nomor}</td>
+                        <td class="px-6 py-4 text-sm">${item.perihal}<br><span class="text-[10px] text-gray-400">${item.tanggal}</span></td>
+                        <td class="px-6 py-4 text-center">
+                            <a href="${item.fileContent}" download="${item.fileName}" class="inline-block bg-blue-100 text-blue-700 px-4 py-1 rounded-full text-xs font-bold hover:bg-blue-700 hover:text-white transition">
+                                <i class="fas fa-eye mr-1"></i> Buka / Download
+                            </a>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <button onclick="deleteEntry(${item.id})" class="text-gray-300 hover:text-red-600 transition"><i class="fas fa-trash-alt"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+        renderTable();
+    </script>
+</body>
+</html>
